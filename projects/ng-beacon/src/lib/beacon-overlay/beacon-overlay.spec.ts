@@ -1,6 +1,5 @@
 import { ApplicationRef } from '@angular/core';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
 
 import { BEACON_CONFIG, BEACON_TRANSLATE_FN, BeaconStep } from '../beacon.model';
 import { BeaconService } from '../beacon.service';
@@ -26,7 +25,7 @@ describe('BeaconOverlay', () => {
     function setup(providers: any[] = []) {
         TestBed.configureTestingModule({
             imports: [BeaconOverlay],
-            providers: [provideRouter([]), provideBeacon(), ...providers],
+            providers: [provideBeacon(), ...providers],
         });
 
         fixture = TestBed.createComponent(BeaconOverlay);

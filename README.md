@@ -1,7 +1,7 @@
 # ng-beacon
 
-Lightweight guided-tour library for Angular 19+ (zoneless-compatible).  
-SVG spotlight overlays, signal-based state, keyboard navigation, and i18n — zero external dependencies beyond Angular.
+Lightweight guided-tour library for Angular 19+ with Angular Signals and zoneless-compatible rendering.
+SVG spotlight overlays, keyboard navigation, and lightweight i18n hooks with zero runtime dependencies beyond Angular.
 
 ![ng-beacon demo](./assets/output.gif)
 
@@ -13,7 +13,8 @@ SVG spotlight overlays, signal-based state, keyboard navigation, and i18n — ze
 
 - **Signal-based** — reactive state via Angular Signals, fully OnPush / zoneless compatible
 - **SVG spotlight** — smooth cutout mask highlights the target element
-- **Keyboard support** — Escape to close, focus trapping in the tooltip
+- **Accessible focus handling** — focus moves into the tooltip and is restored on close
+- **Keyboard support** — Escape closes, ArrowLeft goes back, ArrowRight advances
 - **i18n ready** — plug in any translation function (ngx-translate, Transloco, etc.)
 - **Theming** — CSS custom properties for colors, radius, shadow, width
 - **Tiny footprint** — no Material, no CDK, no extra runtime deps
@@ -90,6 +91,41 @@ export const MY_TOUR: BeaconStep[] = [
 this.beaconService.start(MY_TOUR);
 ```
 
+## Optional Router Integration
+
+If your app uses Angular Router and you want tours to close after route changes, subscribe to `NavigationEnd` in app-level code and call `stop()`:
+
+```ts
+import { Component, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router } from '@angular/router';
+import { filter } from 'rxjs';
+import { BeaconService } from 'ng-beacon';
+
+@Component({
+  selector: 'app-root',
+  template: `<router-outlet />`,
+})
+export class AppComponent {
+  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly beaconService = inject(BeaconService);
+
+  constructor() {
+    this.router.events
+      .pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => {
+        if (this.beaconService.isActive()) {
+          this.beaconService.stop();
+        }
+      });
+  }
+}
+```
+
 ## Component-Scoped Step Registration
 
 Register steps that are only available while a component is alive:
@@ -154,7 +190,7 @@ beacon-overlay {
 | `totalSteps()` | Number of steps (0 when idle) |
 | `isFirstStep()` / `isLastStep()` | Position booleans |
 | `start(steps)` | Start a tour (filters invisible steps, translates text) |
-| `next()` / `prev()` | Navigate; stops tour at boundaries |
+| `next()` / `prev()` | Navigate between steps; `next()` stops on the last step and `prev()` stays on the first step |
 | `stop()` | End the tour |
 | `getContextSteps()` | All currently registered context steps |
 | `registerContextSteps(steps)` | Add steps to the registry |
@@ -178,6 +214,8 @@ interface BeaconStep {
 | Key | Action |
 |---|---|
 | `Escape` | Stop the tour |
+| `ArrowLeft` | Go to the previous step |
+| `ArrowRight` | Go to the next step |
 
 ## Development
 

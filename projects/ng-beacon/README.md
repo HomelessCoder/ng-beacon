@@ -1,7 +1,7 @@
 # ng-beacon
 
-Lightweight guided-tour library for Angular 19+ (zoneless-compatible).  
-SVG spotlight overlays, signal-based state, keyboard navigation, and i18n — zero external dependencies beyond Angular.
+Lightweight guided-tour library for Angular 19+ with Angular Signals and zoneless-compatible rendering.  
+SVG spotlight overlays, keyboard navigation, and lightweight i18n hooks with zero runtime dependencies beyond Angular.
 
 Animated demo: [View the GitHub README demo](https://github.com/HomelessCoder/ng-beacon#readme) or [open the GIF directly](https://github.com/HomelessCoder/ng-beacon/blob/main/assets/output.gif).
 
@@ -40,7 +40,11 @@ const TOUR: BeaconStep[] = [
 this.beaconService.start(TOUR);
 ```
 
+If your app uses Angular Router and you want tours to close after route changes, subscribe to `NavigationEnd` and call `beaconService.stop()` from app-level code.
+
 See the [full documentation](https://github.com/HomelessCoder/ng-beacon#readme) for i18n, theming, component-scoped registration, and API reference.
+
+Keyboard support includes `Escape` to close, `ArrowLeft` to go back, and `ArrowRight` to advance.
 
 ## License
 

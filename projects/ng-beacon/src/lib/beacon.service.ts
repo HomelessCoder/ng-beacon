@@ -1,13 +1,8 @@
-import { computed, DestroyRef, inject, Injectable, signal } from "@angular/core";
-import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
-import { NavigationEnd, Router } from "@angular/router";
-import { filter } from "rxjs";
+import { computed, inject, Injectable, signal } from "@angular/core";
 import { BEACON_TRANSLATE_FN, BeaconState, BeaconStep } from "./beacon.model";
 
 @Injectable()
 export class BeaconService {
-    private readonly destroyRef = inject(DestroyRef);
-    private readonly router = inject(Router);
     private readonly translateFn = inject(BEACON_TRANSLATE_FN);
     private readonly state = signal<BeaconState>({ status: 'idle', steps: [], currentStepIndex: 0 });
     private readonly registry = signal<ReadonlyArray<readonly BeaconStep[]>>([]);
@@ -57,23 +52,6 @@ export class BeaconService {
 
         return null;
     });
-
-    constructor() {
-        if (!this.router?.events) {
-            return;
-        }
-
-        this.router.events.pipe(
-            filter((e): e is NavigationEnd => e instanceof NavigationEnd),
-            takeUntilDestroyed(this.destroyRef),
-        ).subscribe(_ => {
-            if (!this.isActive()) {
-                return;
-            }
-
-            this.stop();
-        });
-    }
 
     /**
      * Start a tour with the given steps.

@@ -1,5 +1,4 @@
 import { TestBed } from '@angular/core/testing';
-import { NavigationEnd, provideRouter, Router } from '@angular/router';
 
 import { BeaconStep } from './beacon.model';
 import { BeaconService } from './beacon.service';
@@ -20,7 +19,7 @@ describe('BeaconService', () => {
 
     beforeEach(() => {
         TestBed.configureTestingModule({
-            providers: [provideRouter([]), provideBeacon()],
+            providers: [provideBeacon()],
         });
         service = TestBed.inject(BeaconService);
     });
@@ -140,7 +139,6 @@ describe('BeaconService', () => {
             TestBed.resetTestingModule();
             TestBed.configureTestingModule({
                 providers: [
-                    provideRouter([]),
                     provideBeacon(),
                     provideBeaconTranslateFn(() => (key: string) => `[${key}]`),
                 ],
@@ -244,27 +242,6 @@ describe('BeaconService', () => {
 
         it('should be safe to call while already idle', () => {
             service.stop();
-            expect(service.isActive()).toBe(false);
-        });
-    });
-
-    // ── Navigation integration ──────────────────────────────────────
-
-    describe('router navigation', () => {
-        it('should stop the tour on NavigationEnd', () => {
-            service.start([centerStep('s1')]);
-
-            const router = TestBed.inject(Router);
-            // Simulate a NavigationEnd event
-            (router.events as any).next(new NavigationEnd(1, '/test', '/test'));
-
-            expect(service.isActive()).toBe(false);
-        });
-
-        it('should not error on NavigationEnd when already idle', () => {
-            const router = TestBed.inject(Router);
-            (router.events as any).next(new NavigationEnd(1, '/test', '/test'));
-
             expect(service.isActive()).toBe(false);
         });
     });
