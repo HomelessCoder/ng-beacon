@@ -1,6 +1,6 @@
 {
     "name": "ng-beacon",
-    "version": "0.0.7",
+    "version": "0.0.8",
     "description": "Lightweight guided-tour library for Angular 19+ with signal-based state, SVG spotlight overlays, keyboard navigation, and i18n support.",
     "author": "Evgenii T (https://github.com/HomelessCoder)",
     "keywords": [

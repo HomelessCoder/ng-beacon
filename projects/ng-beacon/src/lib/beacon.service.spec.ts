@@ -208,8 +208,8 @@ describe('BeaconService', () => {
             service.start([centerStep('s1'), centerStep('s2')]);
             service.prev(); // on first step → stop
 
-            expect(service.isActive()).toBe(false);
-            expect(service.currentStep()).toBeNull();
+            expect(service.isActive()).toBe(true);
+            expect(service.currentStep()).toEqual(centerStep('s1'));
         });
 
         it('should reset to idle when called while not active', () => {

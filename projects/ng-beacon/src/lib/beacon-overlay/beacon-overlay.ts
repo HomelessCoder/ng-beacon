@@ -13,6 +13,8 @@ import { BeaconService } from '../beacon.service';
     changeDetection: ChangeDetectionStrategy.OnPush,
     host: {
         '(document:keydown.escape)': 'onEscape()',
+        '(document:keydown.arrowright)': 'beaconService.next()',
+        '(document:keydown.arrowleft)': 'beaconService.prev()',
     },
 })
 export class BeaconOverlay {

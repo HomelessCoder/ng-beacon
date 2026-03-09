@@ -107,15 +107,11 @@ export class BeaconService {
         });
     }
 
-    /** Go back to the previous step. If already on the first step, the tour is stopped. */
+    /** Go back to the previous step. */
     prev() {
         this.state.update(state => {
-            if (state.status !== 'active') {
-                return { ...state, status: 'idle', steps: [], currentStepIndex: 0 };
-            }
-
-            if (state.currentStepIndex <= 0) {
-                return { ...state, status: 'idle', steps: [], currentStepIndex: 0 };
+            if (state.status !== 'active' || state.currentStepIndex <= 0) {
+                return { ...state, currentStepIndex: 0 };
             }
 
             return { ...state, currentStepIndex: state.currentStepIndex - 1 };
