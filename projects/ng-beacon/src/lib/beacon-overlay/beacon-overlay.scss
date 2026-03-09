@@ -8,13 +8,39 @@
     inset: 0;
     z-index: 9998;
     pointer-events: none;
+    opacity: 0;
+    transition: opacity 180ms ease;
+
+    &.is-visible {
+        opacity: 1;
+    }
+
+    .beacon-spotlight {
+        transition:
+            x 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
+            y 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
+            width 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
+            height 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
 }
 
 .beacon-click-blocker {
     position: fixed;
     inset: 0;
     z-index: 9999;
-    pointer-events: all;
+    opacity: 0;
+    pointer-events: none;
+    transition:
+        opacity 180ms ease,
+        left 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
+        top 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
+        width 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
+        height 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+
+    &.is-visible {
+        opacity: 1;
+        pointer-events: all;
+    }
 }
 
 .beacon-tooltip {
@@ -28,7 +54,21 @@
     width: var(--beacon-width, 320px);
     max-width: calc(100vw - 24px);
     box-sizing: border-box;
-    animation: beacon-fade-in 150ms ease-out;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(12px) scale(0.98);
+    transition:
+        opacity 180ms ease,
+        transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+        left 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
+        top 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    will-change: opacity, transform, left, top;
+
+    &.is-visible {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0) scale(1);
+    }
 
     .beacon-tooltip-header {
         display: flex;
@@ -116,15 +156,5 @@
                 background: var(--beacon-primary-hover, #2563eb);
             }
         }
-    }
-}
-
-@keyframes beacon-fade-in {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
     }
 }

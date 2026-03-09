@@ -1,5 +1,5 @@
 import { ApplicationRef } from '@angular/core';
-import { ComponentFixture, TestBed, fakeAsync, flush, tick } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
 import { BEACON_CONFIG, BEACON_TRANSLATE_FN, BeaconStep } from '../beacon.model';
@@ -164,13 +164,18 @@ describe('BeaconOverlay', () => {
             detectChanges();
         });
 
-        it('close button should stop the tour', () => {
+        it('close button should stop the tour', fakeAsync(() => {
             query('.beacon-tooltip-close')!.click();
             detectChanges();
 
             expect(service.isActive()).toBe(false);
+            expect(query('.beacon-tooltip')?.classList.contains('is-visible')).toBeFalse();
+
+            tick(180);
+            fixture.detectChanges();
+
             expect(query('.beacon-tooltip')).toBeNull();
-        });
+        }));
 
         it('next button should advance to the next step', () => {
             query('.beacon-tooltip-button.primary')!.click();
@@ -342,8 +347,7 @@ describe('BeaconOverlay', () => {
 
             service.start([centerStep('f1')]);
             detectChanges();
-            // queueMicrotask is used internally — flush microtasks
-            flush();
+            tick(16);
             fixture.detectChanges();
 
             const tooltip = query('.beacon-tooltip') as HTMLElement;
@@ -361,12 +365,12 @@ describe('BeaconOverlay', () => {
 
             service.start([centerStep('f2')]);
             detectChanges();
-            flush();
+            tick(16);
             fixture.detectChanges();
 
             service.stop();
             detectChanges();
-            flush();
+            tick(180);
             fixture.detectChanges();
 
             expect(document.activeElement).toBe(btn);

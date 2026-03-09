@@ -2,7 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { asyncScheduler, fromEvent, merge, throttleTime } from 'rxjs';
-import { BEACON_CONFIG, BEACON_TRANSLATE_FN, DEFAULT_BEACON_LABELS } from '../beacon.model';
+import { BEACON_CONFIG, BEACON_TRANSLATE_FN, BeaconStep, DEFAULT_BEACON_LABELS } from '../beacon.model';
 import { BeaconService } from '../beacon.service';
 
 @Component({
@@ -19,6 +19,7 @@ import { BeaconService } from '../beacon.service';
 })
 export class BeaconOverlay {
     private readonly SPOTLIGHT_PAD = 8;
+    private readonly OVERLAY_TRANSITION_MS = 180;
     private readonly document = inject(DOCUMENT);
     private readonly destroyRef = inject(DestroyRef);
     private readonly targetRect = signal<DOMRect | null>(null);
@@ -28,8 +29,11 @@ export class BeaconOverlay {
     private readonly translateFn = inject(BEACON_TRANSLATE_FN);
     private previouslyFocusedElement: Element | null = null;
     private currentTargetEl: Element | null = null;
+    private hideTimeoutId: number | null = null;
     protected readonly tooltipEl = viewChild<ElementRef<HTMLDivElement>>('tooltipEl');
     protected readonly beaconService = inject(BeaconService);
+    protected readonly renderedStep = signal<BeaconStep | null>(null);
+    protected readonly overlayVisible = signal(false);
 
     protected readonly labels = computed(() => {
         const merged = { ...DEFAULT_BEACON_LABELS, ...this.config.labels };
@@ -63,7 +67,7 @@ export class BeaconOverlay {
     );
 
     protected readonly tooltipPosition = computed(() => {
-        const step = this.beaconService.currentStep();
+        const step = this.renderedStep();
         const { width: vw, height: vh } = this.viewportSize();
         const { width: tooltipWidth, height: tooltipHeight } = this.tooltipSize();
 
@@ -120,21 +124,47 @@ export class BeaconOverlay {
     constructor() {
         this.initViewportListeners();
 
-        effect(() => {
+        effect((onCleanup) => {
             const isActive = this.beaconService.isActive();
 
             if (isActive) {
-                this.previouslyFocusedElement = this.document.activeElement;
+                if (this.hideTimeoutId !== null) {
+                    window.clearTimeout(this.hideTimeoutId);
+                    this.hideTimeoutId = null;
+                }
 
-                // Defer focus to let Angular render the tooltip first
-                queueMicrotask(() => this.focusTooltip());
+                if (!this.overlayVisible()) {
+                    if (this.previouslyFocusedElement === null) {
+                        this.previouslyFocusedElement = this.document.activeElement;
+                    }
+
+                    requestAnimationFrame(() => {
+                        if (!this.beaconService.isActive()) {
+                            return;
+                        }
+
+                        this.overlayVisible.set(true);
+                        this.focusTooltip();
+                    });
+                }
             } else {
                 this.currentTargetEl = null;
 
-                if (this.previouslyFocusedElement) {
-                    (this.previouslyFocusedElement as HTMLElement).focus?.();
-                    this.previouslyFocusedElement = null;
+                if (!this.renderedStep()) {
+                    return;
                 }
+
+                this.overlayVisible.set(false);
+
+                const hideTimeoutId = window.setTimeout(() => {
+                    this.renderedStep.set(null);
+                    this.targetRect.set(null);
+                    this.restoreFocus();
+                    this.hideTimeoutId = null;
+                }, this.OVERLAY_TRANSITION_MS);
+
+                this.hideTimeoutId = hideTimeoutId;
+                onCleanup(() => window.clearTimeout(hideTimeoutId));
             }
         });
 
@@ -142,10 +172,10 @@ export class BeaconOverlay {
             const step = this.beaconService.currentStep();
 
             if (!step) {
-                this.targetRect.set(null);
-
                 return;
             }
+
+            this.renderedStep.set(step);
 
             if (step.selector === undefined) {
                 this.currentTargetEl = null;
@@ -215,5 +245,12 @@ export class BeaconOverlay {
 
     private focusTooltip(): void {
         this.tooltipEl()?.nativeElement.focus();
+    }
+
+    private restoreFocus(): void {
+        if (this.previouslyFocusedElement) {
+            (this.previouslyFocusedElement as HTMLElement).focus?.();
+            this.previouslyFocusedElement = null;
+        }
     }
 }

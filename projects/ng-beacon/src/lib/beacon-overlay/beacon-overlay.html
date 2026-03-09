@@ -1,5 +1,6 @@
-@if (beaconService.isActive() && beaconService.currentStep(); as step) {
-<div class="beacon-backdrop">
+@if (renderedStep(); as step) {
+<div class="beacon-backdrop"
+     [class.is-visible]="overlayVisible()">
     <svg xmlns="http://www.w3.org/2000/svg"
          width="100%"
          height="100%"
@@ -14,6 +15,7 @@
                       [attr.y]="spotlightRect().y"
                       [attr.width]="spotlightRect().width"
                       [attr.height]="spotlightRect().height"
+                      class="beacon-spotlight"
                       rx="8"
                       fill="black" />
                 }
@@ -29,24 +31,28 @@
 <!-- Click blockers around the spotlight (hole remains clickable) -->
 @if (spotlightRect().width > 0) {
 <div class="beacon-click-blocker top"
+     [class.is-visible]="overlayVisible()"
      (click)="beaconService.stop()"
      [style.left.px]="0"
      [style.top.px]="0"
      [style.width.%]="100"
      [style.height.px]="spotlightRect().y"></div>
 <div class="beacon-click-blocker left"
+     [class.is-visible]="overlayVisible()"
      (click)="beaconService.stop()"
      [style.left.px]="0"
      [style.top.px]="spotlightRect().y"
      [style.width.px]="spotlightRect().x"
      [style.height.px]="spotlightRect().height"></div>
 <div class="beacon-click-blocker right"
+     [class.is-visible]="overlayVisible()"
      (click)="beaconService.stop()"
      [style.left.px]="spotlightRect().x + spotlightRect().width"
      [style.top.px]="spotlightRect().y"
      [style.width]="'calc(100vw - ' + (spotlightRect().x + spotlightRect().width) + 'px)'"
      [style.height.px]="spotlightRect().height"></div>
 <div class="beacon-click-blocker bottom"
+     [class.is-visible]="overlayVisible()"
      (click)="beaconService.stop()"
      [style.left.px]="0"
      [style.top.px]="spotlightRect().y + spotlightRect().height"
@@ -54,6 +60,7 @@
      [style.height]="'calc(100vh - ' + (spotlightRect().y + spotlightRect().height) + 'px)'"></div>
 } @else {
 <div class="beacon-click-blocker"
+     [class.is-visible]="overlayVisible()"
      (click)="beaconService.stop()"
      [style.left.px]="0"
      [style.top.px]="0"
@@ -63,6 +70,7 @@
 
 <div #tooltipEl
      class="beacon-tooltip"
+     [class.is-visible]="overlayVisible()"
      tabindex="-1"
      role="dialog"
      aria-modal="true"
