@@ -1,0 +1,45 @@
+# ng-beacon
+
+Lightweight guided-tour library for Angular 19+ (zoneless-compatible).  
+SVG spotlight overlays, signal-based state, keyboard navigation, and i18n — zero external dependencies beyond Angular.
+
+## Install
+
+```bash
+npm install ng-beacon
+```
+
+## Quick Start
+
+```ts
+// app.config.ts
+import { provideBeacon } from 'ng-beacon';
+
+export const appConfig = {
+  providers: [provideBeacon()],
+};
+```
+
+```html
+<!-- app.component.html -->
+@if (beaconService.isActive()) {
+  <beacon-overlay />
+}
+```
+
+```ts
+// Define steps
+const TOUR: BeaconStep[] = [
+  { id: 'welcome', title: 'Welcome!', content: 'Let me show you around.', position: 'center', showWithoutTarget: true },
+  { id: 'nav', title: 'Navigation', content: 'Use the sidebar to navigate.', position: 'end', selector: '[data-tour="sidebar"]' },
+];
+
+// Start the tour
+this.beaconService.start(TOUR);
+```
+
+See the [full documentation](https://github.com/HomelessCoder/ng-beacon#readme) for i18n, theming, component-scoped registration, and API reference.
+
+## License
+
+[MIT](https://github.com/HomelessCoder/ng-beacon/blob/main/LICENSE)

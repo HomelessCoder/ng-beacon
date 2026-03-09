@@ -1,0 +1,42 @@
+{
+    "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+    "version": 1,
+    "newProjectRoot": "projects",
+    "projects": {
+        "ng-beacon": {
+            "projectType": "library",
+            "root": "projects/ng-beacon",
+            "sourceRoot": "projects/ng-beacon/src",
+            "prefix": "lib",
+            "architect": {
+                "build": {
+                    "builder": "@angular-devkit/build-angular:ng-packagr",
+                    "options": {
+                        "project": "projects/ng-beacon/ng-package.json"
+                    },
+                    "configurations": {
+                        "production": {
+                            "tsConfig": "projects/ng-beacon/tsconfig.lib.prod.json"
+                        },
+                        "development": {
+                            "tsConfig": "projects/ng-beacon/tsconfig.lib.json"
+                        }
+                    },
+                    "defaultConfiguration": "production"
+                },
+                "test": {
+                    "builder": "@angular-devkit/build-angular:karma",
+                    "options": {
+                        "tsConfig": "projects/ng-beacon/tsconfig.spec.json",
+                        "karmaConfig": "karma.conf.js",
+                        "codeCoverage": true,
+                        "polyfills": [
+                            "zone.js",
+                            "zone.js/testing"
+                        ]
+                    }
+                }
+            }
+        }
+    }
+}

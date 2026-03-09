@@ -1,0 +1,111 @@
+@if (beaconService.isActive() && beaconService.currentStep(); as step) {
+<div class="beacon-backdrop">
+    <svg xmlns="http://www.w3.org/2000/svg"
+         width="100%"
+         height="100%"
+         aria-hidden="true">
+        <defs>
+            <mask [attr.id]="step.id">
+                <rect width="100%"
+                      height="100%"
+                      fill="white" />
+                @if (spotlightRect().width > 0) {
+                <rect [attr.x]="spotlightRect().x"
+                      [attr.y]="spotlightRect().y"
+                      [attr.width]="spotlightRect().width"
+                      [attr.height]="spotlightRect().height"
+                      rx="8"
+                      fill="black" />
+                }
+            </mask>
+        </defs>
+        <rect width="100%"
+              height="100%"
+              [attr.fill]="backdropColor()"
+              [attr.mask]="'url(#' + step.id + ')'" />
+    </svg>
+</div>
+
+<!-- Click blockers around the spotlight (hole remains clickable) -->
+@if (spotlightRect().width > 0) {
+<div class="beacon-click-blocker top"
+     (click)="beaconService.stop()"
+     [style.left.px]="0"
+     [style.top.px]="0"
+     [style.width.%]="100"
+     [style.height.px]="spotlightRect().y"></div>
+<div class="beacon-click-blocker left"
+     (click)="beaconService.stop()"
+     [style.left.px]="0"
+     [style.top.px]="spotlightRect().y"
+     [style.width.px]="spotlightRect().x"
+     [style.height.px]="spotlightRect().height"></div>
+<div class="beacon-click-blocker right"
+     (click)="beaconService.stop()"
+     [style.left.px]="spotlightRect().x + spotlightRect().width"
+     [style.top.px]="spotlightRect().y"
+     [style.width]="'calc(100vw - ' + (spotlightRect().x + spotlightRect().width) + 'px)'"
+     [style.height.px]="spotlightRect().height"></div>
+<div class="beacon-click-blocker bottom"
+     (click)="beaconService.stop()"
+     [style.left.px]="0"
+     [style.top.px]="spotlightRect().y + spotlightRect().height"
+     [style.width.%]="100"
+     [style.height]="'calc(100vh - ' + (spotlightRect().y + spotlightRect().height) + 'px)'"></div>
+} @else {
+<div class="beacon-click-blocker"
+     (click)="beaconService.stop()"
+     [style.left.px]="0"
+     [style.top.px]="0"
+     [style.width.%]="100"
+     [style.height]="'100dvh'"></div>
+}
+
+<div #tooltipEl
+     class="beacon-tooltip"
+     tabindex="-1"
+     role="dialog"
+     aria-modal="true"
+     [attr.aria-labelledby]="'beacon-title-' + step.id"
+     [attr.aria-describedby]="'beacon-content-' + step.id"
+     [style.left.px]="tooltipPosition().x"
+     [style.top.px]="tooltipPosition().y">
+    <div class="beacon-tooltip-header">
+        <span class="beacon-tooltip-title"
+              [id]="'beacon-title-' + step.id">
+            {{ step.title }}
+        </span>
+        <span class="spacer"></span>
+        <button class="beacon-tooltip-close"
+                [attr.aria-label]="labels().close"
+                (click)="beaconService.stop()">
+            &times;
+        </button>
+    </div>
+
+    <p class="beacon-tooltip-content"
+       [id]="'beacon-content-' + step.id"
+       aria-live="polite">
+        {{ step.content }}
+    </p>
+
+    <div class="beacon-tooltip-footer">
+        <span class="beacon-step-counter"
+              aria-hidden="true">
+            {{ beaconService.currentStepIndex()! + 1 }} / {{ beaconService.totalSteps() }}
+        </span>
+        <span class="spacer"></span>
+        <button class="beacon-tooltip-button secondary"
+                (click)="beaconService.prev()"
+                [attr.aria-label]="labels().prevStep"
+                [disabled]="beaconService.isFirstStep()">
+            &larr;
+        </button>
+        <button class="beacon-tooltip-button primary"
+                [attr.aria-label]="labels().nextStep"
+                (click)="beaconService.next()">
+            {{ beaconService.isLastStep() ? '&#10003;' : '&rarr;' }}
+        </button>
+    </div>
+</div>
+}
