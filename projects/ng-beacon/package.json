@@ -1,6 +1,6 @@
 {
     "name": "ng-beacon",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "keywords": [
         "angular",
         "tour",
@@ -22,5 +22,6 @@
     "dependencies": {
         "tslib": "^2.3.0"
     },
-    "sideEffects": false
+    "sideEffects": false,
+    "license": "MIT"
 }
