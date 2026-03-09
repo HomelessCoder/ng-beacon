@@ -18,11 +18,12 @@ import { BeaconService } from '../beacon.service';
     },
 })
 export class BeaconOverlay {
+    private readonly SPOTLIGHT_PAD = 8;
     private readonly document = inject(DOCUMENT);
     private readonly destroyRef = inject(DestroyRef);
     private readonly targetRect = signal<DOMRect | null>(null);
-    private readonly SPOTLIGHT_PAD = 8;
     private readonly tooltipSize = signal({ width: 320, height: 200 });
+    private readonly viewportSize = signal({ width: window.innerWidth, height: window.innerHeight });
     private readonly config = inject(BEACON_CONFIG);
     private readonly translateFn = inject(BEACON_TRANSLATE_FN);
     private previouslyFocusedElement: Element | null = null;
@@ -63,8 +64,7 @@ export class BeaconOverlay {
 
     protected readonly tooltipPosition = computed(() => {
         const step = this.beaconService.currentStep();
-        const vw = window.innerWidth;
-        const vh = window.innerHeight;
+        const { width: vw, height: vh } = this.viewportSize();
         const { width: tooltipWidth, height: tooltipHeight } = this.tooltipSize();
 
         const windowCenter = {
@@ -148,6 +148,7 @@ export class BeaconOverlay {
             }
 
             if (step.selector === undefined) {
+                this.currentTargetEl = null;
                 this.targetRect.set(null);
 
                 return;
@@ -202,6 +203,8 @@ export class BeaconOverlay {
             throttleTime(16, asyncScheduler, { trailing: true }),
             takeUntilDestroyed(this.destroyRef),
         ).subscribe(() => {
+            this.viewportSize.set({ width: window.innerWidth, height: window.innerHeight });
+
             if (!this.beaconService.isActive() || !this.currentTargetEl) {
                 return;
             }
