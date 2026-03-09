@@ -74,32 +74,32 @@ export class BeaconOverlay {
             return windowCenter;
         }
 
-        const rect = this.targetRect();
+        const targetRect = this.targetRect();
 
-        if (!rect) {
+        if (!targetRect) {
             return windowCenter;
         }
 
-        const rectXCenter = Math.round(rect.left + rect.width / 2 - tooltipWidth / 2);
-        const rectYCenter = Math.round(rect.top + rect.height / 2 - tooltipHeight / 2);
+        const rectXCenter = Math.round(targetRect.left + targetRect.width / 2 - tooltipWidth / 2);
+        const rectYCenter = Math.round(targetRect.top + targetRect.height / 2 - tooltipHeight / 2);
         let x: number;
         let y: number;
 
         switch (step.position) {
             case 'above':
                 x = rectXCenter;
-                y = Math.round(rect.top - tooltipHeight - this.SPOTLIGHT_PAD * 1.5);
+                y = Math.round(targetRect.top - tooltipHeight - this.SPOTLIGHT_PAD * 1.5);
                 break;
             case 'below':
                 x = rectXCenter;
-                y = Math.round(rect.bottom + this.SPOTLIGHT_PAD * 1.5);
+                y = Math.round(targetRect.bottom + this.SPOTLIGHT_PAD * 1.5);
                 break;
             case 'start':
-                x = Math.round(rect.left - tooltipWidth);
+                x = Math.round(targetRect.left - tooltipWidth);
                 y = rectYCenter;
                 break;
             case 'end':
-                x = Math.round(rect.right);
+                x = Math.round(targetRect.right);
                 y = rectYCenter;
                 break;
             case 'center':
@@ -109,8 +109,8 @@ export class BeaconOverlay {
         }
 
         // Clamp to viewport
-        x = Math.max(this.SPOTLIGHT_PAD, Math.min(x, vw - tooltipWidth - this.SPOTLIGHT_PAD));
-        y = Math.max(this.SPOTLIGHT_PAD, Math.min(y, vh - tooltipHeight - this.SPOTLIGHT_PAD));
+        x = Math.max(this.SPOTLIGHT_PAD, Math.min(x, vw - tooltipWidth - this.SPOTLIGHT_PAD * 1.5));
+        y = Math.max(this.SPOTLIGHT_PAD, Math.min(y, vh - tooltipHeight - this.SPOTLIGHT_PAD * 1.5));
 
         return { x, y };
     });
@@ -146,6 +146,8 @@ export class BeaconOverlay {
             }
 
             if (step.selector === undefined) {
+                this.targetRect.set(null);
+
                 return;
             }
 
@@ -153,6 +155,7 @@ export class BeaconOverlay {
 
             if (!targetEl) {
                 this.currentTargetEl = null;
+                this.targetRect.set(null);
 
                 return;
             }
@@ -162,18 +165,24 @@ export class BeaconOverlay {
             this.targetRect.set(targetEl.getBoundingClientRect());
         });
 
-        effect(() => {
+        effect((onCleanup) => {
             const tooltipEl = this.tooltipEl();
 
             if (!tooltipEl) {
                 return;
             }
 
-            const { offsetWidth, offsetHeight } = tooltipEl.nativeElement;
+            const observer = new ResizeObserver(() => {
+                const { offsetWidth, offsetHeight } = tooltipEl.nativeElement;
 
-            if (offsetWidth > 0 && offsetHeight > 0) {
-                this.tooltipSize.set({ width: offsetWidth, height: offsetHeight });
-            }
+                if (offsetWidth > 0 && offsetHeight > 0) {
+                    this.tooltipSize.set({ width: offsetWidth, height: offsetHeight });
+                }
+            });
+
+            observer.observe(tooltipEl.nativeElement);
+
+            onCleanup(() => observer.disconnect());
         });
     }
 
