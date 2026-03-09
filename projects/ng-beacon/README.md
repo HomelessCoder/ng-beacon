@@ -3,6 +3,8 @@
 Lightweight guided-tour library for Angular 19+ (zoneless-compatible).  
 SVG spotlight overlays, signal-based state, keyboard navigation, and i18n — zero external dependencies beyond Angular.
 
+Animated demo: [View the GitHub README demo](https://github.com/HomelessCoder/ng-beacon#readme) or [open the GIF directly](https://github.com/HomelessCoder/ng-beacon/blob/main/assets/output.gif).
+
 ## Install
 
 ```bash
