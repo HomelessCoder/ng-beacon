@@ -193,6 +193,8 @@ beacon-overlay {
 | `next()` / `prev()` | Navigate between steps; `next()` stops on the last step and `prev()` stays on the first step |
 | `stop()` | End the tour |
 | `recalculate()` | Re-evaluate step visibility and rebuild the active context tour, preserving the current position by step `id`. No-op for `start()` tours. |
+| `finished()` | `Signal<BeaconTourEvent \| null>` — emits when a tour is completed (user reached the last step) |
+| `dismissed()` | `Signal<BeaconTourEvent \| null>` — emits when a tour is closed early (close button, Escape, click outside, or programmatic `stop()`) |
 | `registerContextSteps(steps)` | Add steps to the registry |
 | `unregisterContextSteps(steps)` | Remove steps from the registry |
 
@@ -206,6 +208,50 @@ interface BeaconStep {
   position: 'above' | 'below' | 'start' | 'end' | 'center';
   selector?: string;
   showWithoutTarget?: boolean;
+}
+```
+
+### `BeaconTourEvent`
+
+```ts
+interface BeaconTourEvent {
+  step: BeaconStep;    // the step that was active when the event fired
+  stepIndex: number;   // zero-based index
+  totalSteps: number;  // total steps in the tour
+}
+```
+
+## Events
+
+`BeaconService` exposes two signals for tracking tour lifecycle:
+
+- **`finished`** — emits when the user completes all steps (clicks next on the last step)
+- **`dismissed`** — emits when the tour is closed early (close button, `Escape`, click outside, or programmatic `stop()`)
+
+Both are `Signal<BeaconTourEvent | null>`, starting as `null`. Each emission is a new object reference, so `effect()` fires every time.
+
+```ts
+import { effect, inject } from '@angular/core';
+import { BeaconService } from 'ng-beacon';
+
+export class AppComponent {
+  private readonly beaconService = inject(BeaconService);
+
+  constructor() {
+    effect(() => {
+      const event = this.beaconService.finished();
+      if (event) {
+        localStorage.setItem('tour-completed', 'true');
+      }
+    });
+
+    effect(() => {
+      const event = this.beaconService.dismissed();
+      if (event) {
+        console.log(`Tour dismissed at step ${event.stepIndex + 1}/${event.totalSteps}`);
+      }
+    });
+  }
 }
 ```
 

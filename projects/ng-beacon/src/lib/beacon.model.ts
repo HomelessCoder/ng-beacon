@@ -68,6 +68,16 @@ export interface BeaconStep {
     showWithoutTarget?: boolean;
 }
 
+/** Emitted when a tour finishes (all steps completed) or is dismissed (closed early). */
+export interface BeaconTourEvent {
+    /** The step that was active when the event fired. */
+    step: BeaconStep;
+    /** Zero-based index of the active step. */
+    stepIndex: number;
+    /** Total number of steps in the tour. */
+    totalSteps: number;
+}
+
 export interface BeaconState {
     status: 'idle' | 'active';
     steps: BeaconStep[];

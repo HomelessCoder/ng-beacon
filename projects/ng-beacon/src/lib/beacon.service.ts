@@ -1,5 +1,5 @@
-import { computed, inject, Injectable, signal } from "@angular/core";
-import { BEACON_TRANSLATE_FN, BeaconState, BeaconStep } from "./beacon.model";
+import { computed, inject, Injectable, Signal, signal } from "@angular/core";
+import { BEACON_TRANSLATE_FN, BeaconState, BeaconStep, BeaconTourEvent } from "./beacon.model";
 
 @Injectable()
 export class BeaconService {
@@ -13,6 +13,15 @@ export class BeaconService {
      */
     private readonly groupStepMap = new Map<readonly BeaconStep[], BeaconStep[]>();
     private contextTourActive = false;
+
+    private readonly _finished = signal<BeaconTourEvent | null>(null);
+    private readonly _dismissed = signal<BeaconTourEvent | null>(null);
+
+    /** Emits a `BeaconTourEvent` each time a tour is completed (user reached the last step and clicked next). `null` initially. */
+    readonly finished: Signal<BeaconTourEvent | null> = this._finished.asReadonly();
+
+    /** Emits a `BeaconTourEvent` each time a tour is dismissed (closed before completion). `null` initially. */
+    readonly dismissed: Signal<BeaconTourEvent | null> = this._dismissed.asReadonly();
 
     /** Whether a tour is currently running. */
     readonly isActive = computed(() => this.state().status === 'active');
@@ -79,8 +88,11 @@ export class BeaconService {
         this.state.set({ status: 'active', steps: translated, currentStepIndex: 0 });
     }
 
-    /** Advance to the next step. If already on the last step, the tour is stopped. */
+    /** Advance to the next step. If already on the last step, the tour is finished. */
     next() {
+        const snapshot = this.snapshotTourEvent();
+        const wasLastStep = snapshot !== null && this.isLastStep();
+
         this.state.update(state => {
             if (state.status !== 'active') {
                 return { ...state, status: 'idle', steps: [], currentStepIndex: 0 };
@@ -92,6 +104,12 @@ export class BeaconService {
 
             return { ...state, currentStepIndex: state.currentStepIndex + 1 };
         });
+
+        if (wasLastStep) {
+            this.groupStepMap.clear();
+            this.contextTourActive = false;
+            this._finished.set(snapshot);
+        }
     }
 
     /** Go back to the previous step. */
@@ -105,11 +123,16 @@ export class BeaconService {
         });
     }
 
-    /** Stop the tour and reset all state. */
+    /** Stop the tour and reset all state. Emits `dismissed` if a tour was active. */
     stop() {
+        const snapshot = this.snapshotTourEvent();
         this.state.set({ status: 'idle', steps: [], currentStepIndex: 0 });
         this.groupStepMap.clear();
         this.contextTourActive = false;
+
+        if (snapshot) {
+            this._dismissed.set(snapshot);
+        }
     }
 
     /**
@@ -171,8 +194,13 @@ export class BeaconService {
         }
 
         if (allSteps.length === 0) {
+            const snapshot = this.snapshotTourEvent();
             this.contextTourActive = false;
             this.state.set({ status: 'idle', steps: [], currentStepIndex: 0 });
+
+            if (snapshot) {
+                this._dismissed.set(snapshot);
+            }
         } else {
             this.state.set({ status: 'active', steps: allSteps, currentStepIndex: index });
         }
@@ -194,6 +222,8 @@ export class BeaconService {
 
         this.groupStepMap.delete(steps);
 
+        const snapshot = this.snapshotTourEvent();
+
         this.state.update(state => {
             if (state.status !== 'active') {
                 return state;
@@ -212,6 +242,25 @@ export class BeaconService {
                 currentStepIndex: Math.min(state.currentStepIndex, remaining.length - 1),
             };
         });
+
+        if (snapshot && !this.isActive()) {
+            this._dismissed.set(snapshot);
+        }
+    }
+
+    /** Snapshot the current tour state for event emission. Returns `null` if no tour is active. */
+    private snapshotTourEvent(): BeaconTourEvent | null {
+        const state = this.state();
+
+        if (state.status !== 'active') {
+            return null;
+        }
+
+        return {
+            step: state.steps[state.currentStepIndex],
+            stepIndex: state.currentStepIndex,
+            totalSteps: state.steps.length,
+        };
     }
 
     private isStepVisible(step: BeaconStep): boolean {

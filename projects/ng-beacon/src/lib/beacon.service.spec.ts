@@ -563,4 +563,169 @@ describe('BeaconService', () => {
             expect(service.isActive()).toBe(false);
         });
     });
+
+    // ── Tour Events (finished / dismissed) ──────────────────────────
+
+    describe('tour events', () => {
+        describe('initial state', () => {
+            it('should have finished as null', () => {
+                expect(service.finished()).toBeNull();
+            });
+
+            it('should have dismissed as null', () => {
+                expect(service.dismissed()).toBeNull();
+            });
+        });
+
+        describe('finished', () => {
+            it('should emit when next() is called on the last step', () => {
+                service.start([centerStep('s1'), centerStep('s2')]);
+                service.next(); // move to s2 (last step)
+                service.next(); // finish
+
+                const event = service.finished();
+                expect(event).not.toBeNull();
+                expect(event!.step.id).toBe('s2');
+                expect(event!.stepIndex).toBe(1);
+                expect(event!.totalSteps).toBe(2);
+            });
+
+            it('should not emit on regular next() calls (mid-tour)', () => {
+                service.start([centerStep('s1'), centerStep('s2'), centerStep('s3')]);
+                service.next(); // move to s2
+
+                expect(service.finished()).toBeNull();
+            });
+
+            it('should not emit when next() is called while idle', () => {
+                service.next();
+
+                expect(service.finished()).toBeNull();
+            });
+
+            it('should emit for single-step tour', () => {
+                service.start([centerStep('only')]);
+                service.next(); // finish
+
+                const event = service.finished();
+                expect(event).not.toBeNull();
+                expect(event!.step.id).toBe('only');
+                expect(event!.stepIndex).toBe(0);
+                expect(event!.totalSteps).toBe(1);
+            });
+
+            it('should emit a new object on each completion', () => {
+                service.start([centerStep('s1')]);
+                service.next();
+                const first = service.finished();
+
+                service.start([centerStep('s2')]);
+                service.next();
+                const second = service.finished();
+
+                expect(first).not.toBe(second);
+                expect(first!.step.id).toBe('s1');
+                expect(second!.step.id).toBe('s2');
+            });
+        });
+
+        describe('dismissed', () => {
+            it('should emit when stop() is called while active', () => {
+                service.start([centerStep('s1'), centerStep('s2')]);
+                service.next(); // move to s2
+                service.stop();
+
+                const event = service.dismissed();
+                expect(event).not.toBeNull();
+                expect(event!.step.id).toBe('s2');
+                expect(event!.stepIndex).toBe(1);
+                expect(event!.totalSteps).toBe(2);
+            });
+
+            it('should not emit when stop() is called while idle', () => {
+                service.stop();
+
+                expect(service.dismissed()).toBeNull();
+            });
+
+            it('should emit with step 0 when dismissed immediately', () => {
+                service.start([centerStep('s1'), centerStep('s2')]);
+                service.stop();
+
+                const event = service.dismissed();
+                expect(event).not.toBeNull();
+                expect(event!.step.id).toBe('s1');
+                expect(event!.stepIndex).toBe(0);
+                expect(event!.totalSteps).toBe(2);
+            });
+
+            it('should emit when all context steps are unregistered mid-tour', () => {
+                const steps: BeaconStep[] = [centerStep('a1'), centerStep('a2')];
+                service.registerContextSteps(steps);
+                service.startContextTour();
+                service.next(); // move to a2
+
+                service.unregisterContextSteps(steps);
+
+                const event = service.dismissed();
+                expect(event).not.toBeNull();
+                expect(event!.step.id).toBe('a2');
+                expect(event!.stepIndex).toBe(1);
+                expect(event!.totalSteps).toBe(2);
+            });
+
+            it('should emit when recalculate() removes all visible steps', () => {
+                const el = document.createElement('div');
+                el.className = 'vanish-all';
+                document.body.appendChild(el);
+
+                const steps: readonly BeaconStep[] = [selectorStep('v1', '.vanish-all')];
+                service.registerContextSteps(steps);
+                service.startContextTour();
+
+                expect(service.isActive()).toBe(true);
+
+                el.remove();
+                service.recalculate();
+
+                const event = service.dismissed();
+                expect(event).not.toBeNull();
+                expect(event!.step.id).toBe('v1');
+                expect(event!.stepIndex).toBe(0);
+                expect(event!.totalSteps).toBe(1);
+            });
+
+            it('should emit a new object on each dismissal', () => {
+                service.start([centerStep('s1')]);
+                service.stop();
+                const first = service.dismissed();
+
+                service.start([centerStep('s2')]);
+                service.stop();
+                const second = service.dismissed();
+
+                expect(first).not.toBe(second);
+                expect(first!.step.id).toBe('s1');
+                expect(second!.step.id).toBe('s2');
+            });
+        });
+
+        describe('independence', () => {
+            it('should not emit dismissed when tour is finished', () => {
+                service.start([centerStep('s1')]);
+                service.next(); // finish
+
+                expect(service.finished()).not.toBeNull();
+                expect(service.dismissed()).toBeNull();
+            });
+
+            it('should not emit finished when tour is dismissed', () => {
+                service.start([centerStep('s1')]);
+                service.stop();
+
+                expect(service.dismissed()).not.toBeNull();
+                expect(service.finished()).toBeNull();
+            });
+        });
+    });
 });
