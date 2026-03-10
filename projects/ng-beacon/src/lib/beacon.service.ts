@@ -7,6 +7,12 @@ export class BeaconService {
     private readonly state = signal<BeaconState>({ status: 'idle', steps: [], currentStepIndex: 0 });
     private readonly registry = signal<ReadonlyArray<readonly BeaconStep[]>>([]);
 
+    /**
+     * Maps each source registration array to its translated steps in the active tour.
+     * Populated by `startContextTour()`, consulted by `unregisterContextSteps()`.
+     */
+    private readonly groupStepMap = new Map<readonly BeaconStep[], BeaconStep[]>();
+
     /** Whether a tour is currently running. */
     readonly isActive = computed(() => this.state().status === 'active');
 
@@ -99,11 +105,36 @@ export class BeaconService {
     /** Stop the tour and reset all state. */
     stop() {
         this.state.set({ status: 'idle', steps: [], currentStepIndex: 0 });
+        this.groupStepMap.clear();
     }
 
-    /** Returns a flattened array of all currently registered context steps. */
-    getContextSteps(): BeaconStep[] {
-        return this.registry().flat();
+    /**
+     * Start a tour from all currently registered context steps.
+     * Unlike `start()`, this method tracks which registration group each step
+     * came from, so that steps are automatically pruned from the running tour
+     * when a component is destroyed and calls `unregisterContextSteps()`.
+     */
+    startContextTour() {
+        this.groupStepMap.clear();
+
+        const allSteps: BeaconStep[] = [];
+
+        for (const group of this.registry()) {
+            const translated = group
+                .filter(this.isStepVisible.bind(this))
+                .map(step => ({
+                    ...step,
+                    title: this.translateFn(step.title),
+                    content: this.translateFn(step.content),
+                }));
+
+            if (translated.length > 0) {
+                this.groupStepMap.set(group, translated);
+                allSteps.push(...translated);
+            }
+        }
+
+        this.state.set({ status: 'active', steps: allSteps, currentStepIndex: 0 });
     }
 
     /** Registers a step array. Call from component field initializers via `registerTourSteps()`. */
@@ -114,6 +145,32 @@ export class BeaconService {
     /** Removes a previously registered step array. Called automatically on component destroy. */
     unregisterContextSteps(steps: readonly BeaconStep[]): void {
         this.registry.update(list => list.filter(entry => entry !== steps));
+
+        const groupSteps = this.groupStepMap.get(steps);
+        if (!groupSteps) {
+            return;
+        }
+
+        this.groupStepMap.delete(steps);
+
+        this.state.update(state => {
+            if (state.status !== 'active') {
+                return state;
+            }
+
+            const stepsToRemove = new Set(groupSteps);
+            const remaining = state.steps.filter(s => !stepsToRemove.has(s));
+
+            if (remaining.length === 0) {
+                return { status: 'idle', steps: [], currentStepIndex: 0 };
+            }
+
+            return {
+                ...state,
+                steps: remaining,
+                currentStepIndex: Math.min(state.currentStepIndex, remaining.length - 1),
+            };
+        });
     }
 
     private isStepVisible(step: BeaconStep): boolean {

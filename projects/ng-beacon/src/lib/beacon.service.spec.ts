@@ -246,42 +246,169 @@ describe('BeaconService', () => {
         });
     });
 
+    // ── startContextTour() ─────────────────────────────────────────
+
+    describe('startContextTour()', () => {
+        const stepsA: BeaconStep[] = [centerStep('a1'), centerStep('a2')];
+        const stepsB: BeaconStep[] = [centerStep('b1')];
+
+        it('should start a tour from all registered context steps', () => {
+            service.registerContextSteps(stepsA);
+            service.registerContextSteps(stepsB);
+            service.startContextTour();
+
+            expect(service.isActive()).toBe(true);
+            expect(service.totalSteps()).toBe(3);
+            expect(service.currentStep()!.id).toBe('a1');
+        });
+
+        it('should filter and translate steps like start()', () => {
+            TestBed.resetTestingModule();
+            TestBed.configureTestingModule({
+                providers: [
+                    provideBeacon(),
+                    provideBeaconTranslateFn(() => (key: string) => `[${key}]`),
+                ],
+            });
+            const svc = TestBed.inject(BeaconService);
+
+            svc.registerContextSteps([centerStep('t1', 'my.title', 'my.content')]);
+            svc.startContextTour();
+
+            expect(svc.currentStep()!.title).toBe('[my.title]');
+            expect(svc.currentStep()!.content).toBe('[my.content]');
+        });
+
+        it('should start an empty tour when no steps are registered', () => {
+            service.startContextTour();
+
+            expect(service.isActive()).toBe(true);
+            expect(service.totalSteps()).toBe(0);
+        });
+    });
+
     // ── Context Step Registry ───────────────────────────────────────
 
     describe('context step registry', () => {
         const stepsA: BeaconStep[] = [centerStep('a1'), centerStep('a2')];
         const stepsB: BeaconStep[] = [centerStep('b1')];
 
-        it('should start with an empty registry', () => {
-            expect(service.getContextSteps()).toEqual([]);
-        });
-
-        it('should register step arrays', () => {
-            service.registerContextSteps(stepsA);
-
-            expect(service.getContextSteps().map(s => s.id)).toEqual(['a1', 'a2']);
-        });
-
-        it('should flatten multiple registrations', () => {
+        it('should register and unregister step arrays', () => {
             service.registerContextSteps(stepsA);
             service.registerContextSteps(stepsB);
+            service.startContextTour();
 
-            expect(service.getContextSteps().map(s => s.id)).toEqual(['a1', 'a2', 'b1']);
-        });
+            expect(service.totalSteps()).toBe(3);
 
-        it('should unregister by exact reference', () => {
-            service.registerContextSteps(stepsA);
-            service.registerContextSteps(stepsB);
+            service.stop();
             service.unregisterContextSteps(stepsA);
+            service.startContextTour();
 
-            expect(service.getContextSteps().map(s => s.id)).toEqual(['b1']);
+            expect(service.totalSteps()).toBe(1);
+            expect(service.currentStep()!.id).toBe('b1');
         });
 
         it('should handle unregistering an unknown reference gracefully', () => {
             service.registerContextSteps(stepsA);
             service.unregisterContextSteps(stepsB); // never registered
 
-            expect(service.getContextSteps().map(s => s.id)).toEqual(['a1', 'a2']);
+            service.startContextTour();
+            expect(service.totalSteps()).toBe(2);
+        });
+    });
+
+    // ── Active tour pruning on unregister ───────────────────────────
+
+    describe('active tour pruning on unregister', () => {
+        const stepsA: BeaconStep[] = [centerStep('a1'), centerStep('a2')];
+        const stepsB: BeaconStep[] = [centerStep('b1'), centerStep('b2')];
+        const stepsC: BeaconStep[] = [centerStep('c1')];
+
+        it('should remove unregistered steps from the active tour', () => {
+            service.registerContextSteps(stepsA);
+            service.registerContextSteps(stepsB);
+            service.startContextTour();
+
+            expect(service.totalSteps()).toBe(4);
+
+            service.unregisterContextSteps(stepsA);
+
+            expect(service.isActive()).toBe(true);
+            expect(service.totalSteps()).toBe(2);
+            expect(service.currentStep()!.id).toBe('b1');
+        });
+
+        it('should clamp currentStepIndex when current step is removed', () => {
+            service.registerContextSteps(stepsA);
+            service.registerContextSteps(stepsB);
+            service.startContextTour();
+
+            // Advance to step b1 (index 2)
+            service.next();
+            service.next();
+            expect(service.currentStep()!.id).toBe('b1');
+
+            // Remove group B — current step is gone
+            service.unregisterContextSteps(stepsB);
+
+            expect(service.isActive()).toBe(true);
+            expect(service.totalSteps()).toBe(2);
+            // Index should clamp to last available step (index 1)
+            expect(service.currentStepIndex()).toBe(1);
+            expect(service.currentStep()!.id).toBe('a2');
+        });
+
+        it('should auto-stop the tour when all steps are removed', () => {
+            service.registerContextSteps(stepsA);
+            service.startContextTour();
+
+            expect(service.isActive()).toBe(true);
+
+            service.unregisterContextSteps(stepsA);
+
+            expect(service.isActive()).toBe(false);
+            expect(service.totalSteps()).toBe(0);
+            expect(service.currentStep()).toBeNull();
+        });
+
+        it('should be a no-op on state when unregistering while tour is idle', () => {
+            service.registerContextSteps(stepsA);
+            service.unregisterContextSteps(stepsA);
+
+            expect(service.isActive()).toBe(false);
+            expect(service.totalSteps()).toBe(0);
+        });
+
+        it('should not affect a tour started with start() directly', () => {
+            service.registerContextSteps(stepsA);
+            service.start([centerStep('d1'), centerStep('d2')]);
+
+            expect(service.totalSteps()).toBe(2);
+
+            service.unregisterContextSteps(stepsA);
+
+            // Tour started via start() is a snapshot — unaffected
+            expect(service.totalSteps()).toBe(2);
+            expect(service.currentStep()!.id).toBe('d1');
+        });
+
+        it('should preserve step order after partial unregister', () => {
+            service.registerContextSteps(stepsA);
+            service.registerContextSteps(stepsB);
+            service.registerContextSteps(stepsC);
+            service.startContextTour();
+
+            // Remove middle group
+            service.unregisterContextSteps(stepsB);
+
+            expect(service.totalSteps()).toBe(3);
+
+            // Walk through remaining steps to verify order
+            expect(service.currentStep()!.id).toBe('a1');
+            service.next();
+            expect(service.currentStep()!.id).toBe('a2');
+            service.next();
+            expect(service.currentStep()!.id).toBe('c1');
         });
     });
 

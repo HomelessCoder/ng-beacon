@@ -139,11 +139,10 @@ export class DashboardComponent {
 }
 ```
 
-Then start a context-aware tour from anywhere:
+Then start a context-aware tour — steps from destroyed components are automatically pruned:
 
 ```ts
-const steps = this.beaconService.getContextSteps();
-this.beaconService.start(steps);
+this.beaconService.startContextTour();
 ```
 
 ## Translation (i18n)
@@ -189,10 +188,10 @@ beacon-overlay {
 | `currentStepIndex()` | Zero-based index or `null` |
 | `totalSteps()` | Number of steps (0 when idle) |
 | `isFirstStep()` / `isLastStep()` | Position booleans |
-| `start(steps)` | Start a tour (filters invisible steps, translates text) |
+| `start(steps)` | Start a tour with explicit steps (snapshot — not reactive to registry changes) |
+| `startContextTour()` | Start a tour from all registered context steps (reactive — steps are pruned when components are destroyed) |
 | `next()` / `prev()` | Navigate between steps; `next()` stops on the last step and `prev()` stays on the first step |
 | `stop()` | End the tour |
-| `getContextSteps()` | All currently registered context steps |
 | `registerContextSteps(steps)` | Add steps to the registry |
 | `unregisterContextSteps(steps)` | Remove steps from the registry |
 
