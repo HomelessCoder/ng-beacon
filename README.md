@@ -91,41 +91,6 @@ export const MY_TOUR: BeaconStep[] = [
 this.beaconService.start(MY_TOUR);
 ```
 
-## Optional Router Integration
-
-If your app uses Angular Router and you want tours to close after route changes, subscribe to `NavigationEnd` in app-level code and call `stop()`:
-
-```ts
-import { Component, DestroyRef, inject } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router } from '@angular/router';
-import { filter } from 'rxjs';
-import { BeaconService } from 'ng-beacon';
-
-@Component({
-  selector: 'app-root',
-  template: `<router-outlet />`,
-})
-export class AppComponent {
-  private readonly router = inject(Router);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly beaconService = inject(BeaconService);
-
-  constructor() {
-    this.router.events
-      .pipe(
-        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe(() => {
-        if (this.beaconService.isActive()) {
-          this.beaconService.stop();
-        }
-      });
-  }
-}
-```
-
 ## Component-Scoped Step Registration
 
 Register steps that are only available while a component is alive:
@@ -159,6 +124,41 @@ providers: [
     return (key: string) => translate.instant(key);
   }),
 ]
+```
+
+## Optional Router Integration
+
+If your app uses Angular Router and you want tours to close after route changes, subscribe to `NavigationEnd` in app-level code and call `stop()`:
+
+```ts
+import { Component, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router } from '@angular/router';
+import { filter } from 'rxjs';
+import { BeaconService } from 'ng-beacon';
+
+@Component({
+  selector: 'app-root',
+  template: `<router-outlet />`,
+})
+export class AppComponent {
+  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly beaconService = inject(BeaconService);
+
+  constructor() {
+    this.router.events
+      .pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(() => {
+        if (this.beaconService.isActive()) {
+          this.beaconService.stop();
+        }
+      });
+  }
+}
 ```
 
 ## Theming
