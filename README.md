@@ -192,6 +192,7 @@ beacon-overlay {
 | `startContextTour()` | Start a tour from all registered context steps (reactive — steps are pruned when components are destroyed) |
 | `next()` / `prev()` | Navigate between steps; `next()` stops on the last step and `prev()` stays on the first step |
 | `stop()` | End the tour |
+| `recalculate()` | Re-evaluate step visibility and rebuild the active context tour, preserving the current position by step `id`. No-op for `start()` tours. |
 | `registerContextSteps(steps)` | Add steps to the registry |
 | `unregisterContextSteps(steps)` | Remove steps from the registry |
 

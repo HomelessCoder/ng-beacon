@@ -63,6 +63,8 @@ export class FeatureComponent {
 
 When a component with registered steps is destroyed during an active context tour, those steps are automatically removed from the running tour and the step index adjusts accordingly.
 
+If UI changes cause previously hidden elements to appear (or visible ones to disappear), call `beaconService.recalculate()` to rebuild the active context tour. The current step is preserved by `id`.
+
 If your app uses Angular Router and you want tours to close after route changes, subscribe to `NavigationEnd` and call `beaconService.stop()` from app-level code.
 
 See the [full documentation](https://github.com/HomelessCoder/ng-beacon#readme) for i18n, theming, component-scoped registration, and API reference.

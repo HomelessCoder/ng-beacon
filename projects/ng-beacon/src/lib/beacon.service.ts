@@ -12,6 +12,7 @@ export class BeaconService {
      * Populated by `startContextTour()`, consulted by `unregisterContextSteps()`.
      */
     private readonly groupStepMap = new Map<readonly BeaconStep[], BeaconStep[]>();
+    private contextTourActive = false;
 
     /** Whether a tour is currently running. */
     readonly isActive = computed(() => this.state().status === 'active');
@@ -66,6 +67,8 @@ export class BeaconService {
      * via the configured `BeaconTranslateFn`.
      */
     start(steps: BeaconStep[]) {
+        this.contextTourActive = false;
+        this.groupStepMap.clear();
         const translated = steps
             .filter(this.isStepVisible.bind(this))
             .map(step => ({
@@ -106,6 +109,7 @@ export class BeaconService {
     stop() {
         this.state.set({ status: 'idle', steps: [], currentStepIndex: 0 });
         this.groupStepMap.clear();
+        this.contextTourActive = false;
     }
 
     /**
@@ -115,6 +119,32 @@ export class BeaconService {
      * when a component is destroyed and calls `unregisterContextSteps()`.
      */
     startContextTour() {
+        this.contextTourActive = true;
+        this.rebuildContextTour(null);
+    }
+
+    /**
+     * Re-evaluate visibility of all registered context steps and rebuild
+     * the active tour. The current step is preserved by `id` so that newly
+     * visible steps appearing before or after the current position do not
+     * cause a jarring jump. No-op when the active tour was not started via
+     * `startContextTour()`.
+     */
+    recalculate() {
+        if (!this.contextTourActive) {
+            return;
+        }
+
+        const currentId = this.currentStep()?.id ?? null;
+        this.rebuildContextTour(currentId);
+    }
+
+    /**
+     * Rebuild the context tour from the registry.
+     * @param position - A step `id` to preserve the current position,
+     *                   or `null` to start from the beginning.
+     */
+    private rebuildContextTour(position: string | null) {
         this.groupStepMap.clear();
 
         const allSteps: BeaconStep[] = [];
@@ -134,7 +164,18 @@ export class BeaconService {
             }
         }
 
-        this.state.set({ status: 'active', steps: allSteps, currentStepIndex: 0 });
+        let index = 0;
+        if (typeof position === 'string') {
+            const found = allSteps.findIndex(s => s.id === position);
+            index = found >= 0 ? found : Math.min(this.state().currentStepIndex, Math.max(allSteps.length - 1, 0));
+        }
+
+        if (allSteps.length === 0) {
+            this.contextTourActive = false;
+            this.state.set({ status: 'idle', steps: [], currentStepIndex: 0 });
+        } else {
+            this.state.set({ status: 'active', steps: allSteps, currentStepIndex: index });
+        }
     }
 
     /** Registers a step array. Call from component field initializers via `registerTourSteps()`. */

@@ -279,10 +279,10 @@ describe('BeaconService', () => {
             expect(svc.currentStep()!.content).toBe('[my.content]');
         });
 
-        it('should start an empty tour when no steps are registered', () => {
+        it('should stay idle when no steps are registered', () => {
             service.startContextTour();
 
-            expect(service.isActive()).toBe(true);
+            expect(service.isActive()).toBe(false);
             expect(service.totalSteps()).toBe(0);
         });
     });
@@ -409,6 +409,135 @@ describe('BeaconService', () => {
             expect(service.currentStep()!.id).toBe('a2');
             service.next();
             expect(service.currentStep()!.id).toBe('c1');
+        });
+    });
+
+    // ── recalculate() ─────────────────────────────────────────────
+
+    describe('recalculate()', () => {
+        const stepsA: readonly BeaconStep[] = [centerStep('a1'), centerStep('a2')];
+
+        it('should add newly visible steps after recalculate', () => {
+            const el = document.createElement('div');
+            el.className = 'late-step';
+
+            const stepsWithSelector: readonly BeaconStep[] = [
+                selectorStep('s1', '.late-step'),
+            ];
+
+            service.registerContextSteps(stepsA);
+            service.registerContextSteps(stepsWithSelector);
+            service.startContextTour();
+
+            // s1 is not in the DOM yet — only stepsA are active
+            expect(service.totalSteps()).toBe(2);
+
+            // Add element to the DOM and recalculate
+            document.body.appendChild(el);
+            service.recalculate();
+
+            expect(service.totalSteps()).toBe(3);
+            expect(service.currentStep()!.id).toBe('a1');
+
+            el.remove();
+        });
+
+        it('should preserve current step by id when steps are added before it', () => {
+            const el = document.createElement('div');
+            el.className = 'early-step';
+
+            // Register a group whose selector is not yet in DOM — it will appear *before* stepsA
+            const earlySteps: readonly BeaconStep[] = [
+                selectorStep('e1', '.early-step'),
+            ];
+
+            service.registerContextSteps(earlySteps);
+            service.registerContextSteps(stepsA);
+            service.startContextTour();
+
+            // Only stepsA visible, navigate to a2
+            expect(service.totalSteps()).toBe(2);
+            service.next();
+            expect(service.currentStep()!.id).toBe('a2');
+
+            // Make earlySteps visible and recalculate
+            document.body.appendChild(el);
+            service.recalculate();
+
+            expect(service.totalSteps()).toBe(3);
+            // Current step is still a2, now at index 2
+            expect(service.currentStep()!.id).toBe('a2');
+            expect(service.currentStepIndex()).toBe(2);
+
+            el.remove();
+        });
+
+        it('should clamp index when current step becomes invisible', () => {
+            const el = document.createElement('div');
+            el.className = 'vanishing';
+            document.body.appendChild(el);
+
+            const vanishingSteps: readonly BeaconStep[] = [
+                selectorStep('v1', '.vanishing'),
+            ];
+
+            service.registerContextSteps(stepsA);
+            service.registerContextSteps(vanishingSteps);
+            service.startContextTour();
+
+            // Navigate to v1 (index 2)
+            service.next();
+            service.next();
+            expect(service.currentStep()!.id).toBe('v1');
+
+            // Remove the element and recalculate — v1 is now invisible
+            el.remove();
+            service.recalculate();
+
+            expect(service.totalSteps()).toBe(2);
+            // Clamped to last step (a2)
+            expect(service.currentStepIndex()).toBe(1);
+            expect(service.currentStep()!.id).toBe('a2');
+        });
+
+        it('should auto-stop when all steps become invisible', () => {
+            const el = document.createElement('div');
+            el.className = 'only-step';
+            document.body.appendChild(el);
+
+            const selectorSteps: readonly BeaconStep[] = [
+                selectorStep('o1', '.only-step'),
+            ];
+
+            service.registerContextSteps(selectorSteps);
+            service.startContextTour();
+
+            expect(service.isActive()).toBe(true);
+
+            el.remove();
+            service.recalculate();
+
+            expect(service.isActive()).toBe(false);
+            expect(service.totalSteps()).toBe(0);
+        });
+
+        it('should be a no-op when tour is idle', () => {
+            service.registerContextSteps(stepsA);
+            service.recalculate();
+
+            expect(service.isActive()).toBe(false);
+            expect(service.totalSteps()).toBe(0);
+        });
+
+        it('should be a no-op for tours started with start()', () => {
+            service.start([centerStep('d1'), centerStep('d2')]);
+            expect(service.totalSteps()).toBe(2);
+
+            service.recalculate();
+
+            // Unchanged — start() tours are not context tours
+            expect(service.totalSteps()).toBe(2);
+            expect(service.currentStep()!.id).toBe('d1');
         });
     });
 
