@@ -19,6 +19,10 @@ SVG spotlight overlays, keyboard navigation, and lightweight i18n hooks with zer
 - **Theming** — CSS custom properties for colors, radius, shadow, width
 - **Tiny footprint** — no Material, no CDK, no extra runtime deps
 
+## Stackblitz Demo
+
+https://stackblitz.com/edit/stackblitz-starters-midtdjmx
+
 ## Quick Start
 
 ### 1. Install
