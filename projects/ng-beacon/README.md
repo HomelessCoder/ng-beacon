@@ -11,6 +11,10 @@ Animated demo: [View the GitHub README demo](https://github.com/HomelessCoder/ng
 npm install ng-beacon
 ```
 
+## Stackblitz Demo
+
+https://stackblitz.com/edit/stackblitz-starters-midtdjmx
+
 ## Quick Start
 
 ```ts
